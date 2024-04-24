@@ -1,0 +1,62 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Slake",
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#strings"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [
+				{
+					"name": "keyword.control.slake",
+					"match": "\\b(async|await|break|case|catch|continue|default|else|for|if|return|static|switch|throw|try|while|yield)\\b"
+				},
+				{
+					"name": "keyword.control.import.slake",
+					"match": "\\b(use)\\b"
+				},
+				{
+					"name": "storage.modifier",
+					"match": "\\b(const|final|native|override|pub)\\b"
+				},
+				{
+					"name": "constant.language.slake",
+					"match": "\\b(base|this)\\b"
+				},
+				{
+					"name": "keyword.operator.word",
+					"match": "\\b(delete|new|operator|typeof)\\b"
+				},
+				{
+					"name": "constant.language.boolean.slake",
+					"match": "\\b(false|true)\\b"
+				},
+				{
+					"name": "constant.language.null",
+					"match": "\\b(null)\\b"
+				},
+				{
+					"name": "storage.type",
+					"match": "\\b(class|enum|fn|module|struct|trait|i8|i16|i32|i64|u8|u16|u32|u64|f32|f64|string|bool|auto|void|any)\\b"
+				}
+			]
+		},
+		"strings": {
+			"name": "string.quoted.double.slake",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.slake",
+					"match": "\\\\."
+				}
+			]
+		}
+	},
+	"scopeName": "source.slake"
+}
