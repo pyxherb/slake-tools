@@ -6,6 +6,12 @@
 			"include": "#keywords"
 		},
 		{
+			"include": "#integers"
+		},
+		{
+			"include": "#decimals"
+		},
+		{
 			"include": "#strings"
 		}
 	],
@@ -29,7 +35,7 @@
 					"match": "\\b(base|this)\\b"
 				},
 				{
-					"name": "keyword.operator.word",
+					"name": "keyword.control.slake",
 					"match": "\\b(delete|new|operator|typeof)\\b"
 				},
 				{
@@ -43,6 +49,38 @@
 				{
 					"name": "storage.type",
 					"match": "\\b(class|enum|fn|module|struct|trait|i8|i16|i32|i64|u8|u16|u32|u64|f32|f64|string|bool|auto|void|any)\\b"
+				}
+			]
+		},
+		"integers": {
+			"patterns": [
+				{
+					"name": "constant.numeric.integer",
+					"match": "\\b0[0-7]+\\b"
+				},
+				{
+					"name": "constant.numeric.integer",
+					"match": "\\b[0-9]+\\b"
+				},
+				{
+					"name": "constant.numeric.integer",
+					"match": "\\b0[xX][0-9a-fA-F]+\\b"
+				},
+				{
+					"name": "constant.numeric.integer",
+					"match": "\\b0[bB][01]+\\b"
+				}
+			]
+		},
+		"decimals": {
+			"patterns": [
+				{
+					"name": "constant.numeric.decimal",
+					"match": "[0-9]+.[0-9]+[fF]"
+				},
+				{
+					"name": "constant.numeric.decimal",
+					"match": "[0-9]+.[0-9]+"
 				}
 			]
 		},

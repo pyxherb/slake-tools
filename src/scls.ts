@@ -3,11 +3,15 @@
  */
 import * as http from 'http';
 import { Position } from 'vscode-languageserver-textdocument';
-import { CompletionItemKind, DiagnosticSeverity } from 'vscode-languageserver/node';
+import { CompletionItemKind, DiagnosticSeverity, SemanticTokenModifiers, SemanticTokenTypes, uinteger } from 'vscode-languageserver/node';
+
+//
+// Basic types and enumerations.
+//
 
 export interface Location {
-	line: number;
-	column: number;
+	line: uinteger;
+	column: uinteger;
 }
 
 export function toVscodePosition(loc: Location): Position {
@@ -85,26 +89,6 @@ export interface CompletionItem {
 	deprecated: boolean;
 }
 
-export interface DocumentOpenRequest {
-	uri: string;
-	languageId: string;
-	markupType: ClientMarkupType;
-}
-
-export interface DocumentUpdateRequest {
-	uri: string;
-	content: string;
-}
-
-export interface DocumentCloseRequest {
-	uri: string;
-}
-
-export interface CompletionRequest {
-	uri: string;
-	location: Location;
-}
-
 export enum CompilerMessageType {
 	Info = 0,
 	Note,
@@ -112,7 +96,7 @@ export enum CompilerMessageType {
 	Error
 }
 
-export function toDiagnosticSeverity(type: CompilerMessageType): DiagnosticSeverity | undefined {
+export function toVscodeDiagnosticSeverity(type: CompilerMessageType): DiagnosticSeverity | undefined {
 	switch (type) {
 		case CompilerMessageType.Info:
 			return DiagnosticSeverity.Information;
@@ -133,6 +117,140 @@ export interface CompilerMessage {
 	message: string;
 }
 
+export enum SemanticTokenType {
+	None = 0,
+	Type,
+	Class,
+	Enum,
+	Interface,
+	Struct,
+	TypeParam,
+	Param,
+	Var,
+	Property,
+	EnumMember,
+	Fn,
+	Method,
+	Keyword,
+	Modifier,
+	Comment,
+	String,
+	Number,
+	Operator
+}
+
+// For SemanticTokenLegend.
+export const vscodeSemanticTokenTypes: (SemanticTokenTypes | undefined)[] = [
+	undefined,
+	SemanticTokenTypes.type,
+	SemanticTokenTypes.class,
+	SemanticTokenTypes.enum,
+	SemanticTokenTypes.interface,
+	SemanticTokenTypes.struct,
+	SemanticTokenTypes.typeParameter,
+	SemanticTokenTypes.parameter,
+	SemanticTokenTypes.variable,
+	SemanticTokenTypes.property,
+	SemanticTokenTypes.enumMember,
+	SemanticTokenTypes.function,
+	SemanticTokenTypes.method,
+	SemanticTokenTypes.keyword,
+	SemanticTokenTypes.modifier,
+	SemanticTokenTypes.comment,
+	SemanticTokenTypes.string,
+	SemanticTokenTypes.number,
+	SemanticTokenTypes.operator
+];
+
+export function toVscodeSemanticTokenType(type: SemanticTokenType): SemanticTokenTypes | undefined {
+	return vscodeSemanticTokenTypes[type as number];
+}
+
+export function toVscodeSemanticTokenIndex(type: SemanticTokenType): uinteger | undefined {
+	return (type as uinteger);
+}
+
+export enum SemanticTokenModifier {
+	Decl = 0,
+	Def,
+	Readonly,
+	Static,
+	Deprecated,
+	Abstract,
+	Async
+}
+
+// For SemanticTokenLegend.
+export const vscodeSemanticTokenModifiers: SemanticTokenModifiers[] = [
+	SemanticTokenModifiers.declaration,
+	SemanticTokenModifiers.definition,
+	SemanticTokenModifiers.readonly,
+	SemanticTokenModifiers.static,
+	SemanticTokenModifiers.deprecated,
+	SemanticTokenModifiers.abstract,
+	SemanticTokenModifiers.async
+];
+
+export function toVscodeSemanticTokenModifier(modifier: SemanticTokenModifier): SemanticTokenModifiers | undefined {
+	return vscodeSemanticTokenModifiers[modifier as uinteger];
+}
+
+export function toVscodeSemanticTokenModifierIndex(modifier: SemanticTokenModifier): uinteger | undefined {
+	return (1 << (modifier as uinteger));
+}
+
+export interface SemanticToken {
+	type : SemanticTokenType;
+	modifiers : SemanticTokenModifier[];
+	location: Location;
+	length: uinteger;
+}
+
+//
+// Request types.
+//
+
+export interface DocumentOpenRequest {
+	uri: string;
+	languageId: string;
+	markupType: ClientMarkupType;
+}
+
+export interface DocumentUpdateRequest {
+	uri: string;
+	content: string;
+}
+
+export interface DocumentCloseRequest {
+	uri: string;
+}
+
+export interface CompletionRequest {
+	uri: string;
+	location: Location;
+}
+
+export interface SemanticTokensRequest {
+	uri: string;
+}
+
+export interface HoverRequest {
+	uri: string;
+	location: Location;
+}
+
+//
+// Response types.
+//
+
+export enum ResponseType {
+	DocumentOk = 0,
+	DocumentError,
+	Completion,
+	SemanticTokens,
+	Hover
+}
+
 export interface DocumentOkResponseBody {
 	uri: string;
 	compilerMessages: CompilerMessage[];
@@ -149,10 +267,14 @@ export interface CompletionResponseBody {
 	completionItems: CompletionItem[];
 }
 
-export enum ResponseType {
-	DocumentOk = 0,
-	DocumentError,
-	Completion
+export interface SemanticTokensResponseBody {
+	uri: string;
+	semanticTokens: SemanticToken[];
+}
+
+export interface HoverResponseBody {
+	uri: string;
+	content: string;
 }
 
 export interface ServerResponse {
@@ -161,10 +283,10 @@ export interface ServerResponse {
 }
 
 //
-// SCLS server interaction definitions
+// SCLS server interaction definitions.
 //
 
-let serverPort = 11451;
+export let serverPort = 11451;
 
 function sendRequest(data: string, path: string, method: string): Promise<string> {
 	return new Promise((resolve, reject) => {
@@ -209,4 +331,12 @@ export async function sendDocumentCloseRequest(request: DocumentCloseRequest): P
 
 export async function sendCompletionRequest(request: CompletionRequest): Promise<ServerResponse> {
 	return JSON.parse(await sendRequest(JSON.stringify(request), "/completion", "post"));
+}
+
+export async function sendSemanticTokensRequest(request: SemanticTokensRequest): Promise<ServerResponse> {
+	return JSON.parse(await sendRequest(JSON.stringify(request), "/semanticTokens", "post"));
+}
+
+export async function sendHoverRequest(request: HoverRequest): Promise<ServerResponse> {
+	return JSON.parse(await sendRequest(JSON.stringify(request), "/hover", "post"));
 }

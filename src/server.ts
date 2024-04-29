@@ -11,7 +11,15 @@ import {
 	TextDocumentPositionParams,
 	TextDocumentSyncKind,
 	InitializeResult,
-	CompletionItemTag
+	CompletionItemTag,
+	DocumentHighlightParams,
+	DocumentHighlight,
+	SemanticTokensParams,
+	SemanticTokens,
+	uinteger,
+	SemanticTokenTypes,
+	HoverParams,
+	Hover
 } from 'vscode-languageserver/node';
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
@@ -51,8 +59,20 @@ connection.onInitialize((params: InitializeParams) => {
 			textDocumentSync: TextDocumentSyncKind.Incremental,
 			// Tell the client that this server supports code completion.
 			completionProvider: {
-				resolveProvider: true
-			}
+				resolveProvider: true,
+				triggerCharacters: ['.']
+			},
+			semanticTokensProvider: {
+				legend: {
+					tokenTypes: scls.vscodeSemanticTokenTypes as SemanticTokenTypes[],
+					tokenModifiers: scls.vscodeSemanticTokenModifiers
+				},
+				range: false,
+				full: {
+					delta: false
+				}
+			},
+			hoverProvider: true
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -102,7 +122,7 @@ connection.onDidChangeConfiguration(change => {
 	}
 
 	// Revalidate all open text documents
-	documents.all().forEach(documentUpdate);
+	documents.all().forEach(updateDocument);
 });
 
 function getDocumentSettings(resource: string): Thenable<Settings> {
@@ -121,18 +141,18 @@ function getDocumentSettings(resource: string): Thenable<Settings> {
 }
 
 documents.onDidOpen(e => {
-	openDocument(e.document);
+	onDocumentOpen(e.document);
 });
 
 // Only keep settings for open documents
 documents.onDidClose(e => {
-	closeDocument(e.document);
+	onDocumentClose(e.document);
 });
 
 // The content of a text document has changed. This event is emitted
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent(change => {
-	documentUpdate(change.document);
+	updateDocument(change.document);
 });
 
 connection.onDidChangeWatchedFiles(_change => {
@@ -141,7 +161,7 @@ connection.onDidChangeWatchedFiles(_change => {
 });
 
 // This handler provides the initial list of the completion items.
-connection.onCompletion(completion);
+connection.onCompletion(onCompletion);
 
 // This handler resolves additional information for the item selected in
 // the completion list.
@@ -158,7 +178,10 @@ connection.onCompletion(completion);
 	}
 );*/
 
-async function openDocument(textDocument: TextDocument): Promise<void> {
+connection.languages.semanticTokens.on(onSemanticTokens);
+connection.onHover(onHover);
+
+async function onDocumentOpen(textDocument: TextDocument): Promise<void> {
 	documentSettings.delete(textDocument.uri);
 
 	let request: scls.DocumentOpenRequest = {
@@ -166,9 +189,9 @@ async function openDocument(textDocument: TextDocument): Promise<void> {
 		languageId: textDocument.languageId,
 		markupType: scls.ClientMarkupType.Markdown
 	};
-	let result: scls.ServerResponse = await scls.sendDocumentOpenRequest(request);
+	let response: scls.ServerResponse = await scls.sendDocumentOpenRequest(request);
 
-	switch (result.type) {
+	switch (response.type) {
 		case scls.ResponseType.DocumentOk: {
 			break;
 		}
@@ -177,15 +200,15 @@ async function openDocument(textDocument: TextDocument): Promise<void> {
 	}
 }
 
-async function closeDocument(textDocument: TextDocument): Promise<void> {
+async function onDocumentClose(textDocument: TextDocument): Promise<void> {
 	documentSettings.delete(textDocument.uri);
 
 	let request: scls.DocumentCloseRequest = {
 		uri: textDocument.uri
 	};
-	let result: scls.ServerResponse = await scls.sendDocumentCloseRequest(request);
+	let response: scls.ServerResponse = await scls.sendDocumentCloseRequest(request);
 
-	switch (result.type) {
+	switch (response.type) {
 		case scls.ResponseType.DocumentOk: {
 			break;
 		}
@@ -194,7 +217,7 @@ async function closeDocument(textDocument: TextDocument): Promise<void> {
 	}
 }
 
-async function documentUpdate(textDocument: TextDocument): Promise<void> {
+async function updateDocument(textDocument: TextDocument): Promise<void> {
 	// In this simple example we get the settings for every validate run.
 	let settings = await getDocumentSettings(textDocument.uri);
 
@@ -206,11 +229,11 @@ async function documentUpdate(textDocument: TextDocument): Promise<void> {
 		uri: textDocument.uri,
 		content: textDocument.getText()
 	};
-	let result: scls.ServerResponse = await scls.sendDocumentUpdateRequest(request);
+	let response: scls.ServerResponse = await scls.sendDocumentUpdateRequest(request);
 
-	switch (result.type) {
+	switch (response.type) {
 		case scls.ResponseType.DocumentOk: {
-			let body: scls.DocumentOkResponseBody = result.body;
+			let body: scls.DocumentOkResponseBody = response.body;
 
 			if (body.compilerMessages) {
 				for (let i of body.compilerMessages) {
@@ -226,7 +249,7 @@ async function documentUpdate(textDocument: TextDocument): Promise<void> {
 							}
 						},
 						message: i.message,
-						severity: scls.toDiagnosticSeverity(i.type)
+						severity: scls.toVscodeDiagnosticSeverity(i.type)
 					};
 
 					diagnostics.push(diagnostic);
@@ -240,9 +263,11 @@ async function documentUpdate(textDocument: TextDocument): Promise<void> {
 
 	// Send the computed diagnostics to VS Code.
 	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
+
+	connection.languages.semanticTokens.refresh();
 }
 
-async function completion(_textDocumentPosition: TextDocumentPositionParams): Promise<CompletionItem[]> {
+async function onCompletion(_textDocumentPosition: TextDocumentPositionParams): Promise<CompletionItem[]> {
 	let request: scls.CompletionRequest = {
 		uri: _textDocumentPosition.textDocument.uri,
 		location: {
@@ -251,11 +276,11 @@ async function completion(_textDocumentPosition: TextDocumentPositionParams): Pr
 		}
 	};
 
-	let result = await scls.sendCompletionRequest(request);
+	let response = await scls.sendCompletionRequest(request);
 
-	switch (result.type) {
+	switch (response.type) {
 		case scls.ResponseType.Completion: {
-			let body: scls.CompletionResponseBody = result.body;
+			let body: scls.CompletionResponseBody = response.body;
 
 			let items: CompletionItem[] = [];
 
@@ -270,7 +295,8 @@ async function completion(_textDocumentPosition: TextDocumentPositionParams): Pr
 							documentation: i.documentations,
 							insertText: i.insertText,
 
-							tags: i.deprecated ? [CompletionItemTag.Deprecated] : []
+							tags: i.deprecated ? [CompletionItemTag.Deprecated] : [],
+							commitCharacters: ['.']
 						}
 					);
 				}
@@ -286,6 +312,93 @@ async function completion(_textDocumentPosition: TextDocumentPositionParams): Pr
 	}
 
 	return [];
+}
+
+async function onSemanticTokens(params: SemanticTokensParams): Promise<SemanticTokens> {
+	let request: scls.SemanticTokensRequest = {
+		uri: params.textDocument.uri
+	};
+
+	let response = await scls.sendSemanticTokensRequest(request);
+
+	switch (response.type) {
+		case scls.ResponseType.SemanticTokens: {
+			let body: scls.SemanticTokensResponseBody = response.body;
+
+			let tokens: SemanticTokens = {
+				data: []
+			};
+
+			if (body.semanticTokens) {
+				let lastLocation: scls.Location | undefined = undefined;
+
+				for (let i of body.semanticTokens) {
+					if (i.type !== scls.SemanticTokenType.None) {
+						if (lastLocation !== undefined) {
+							if (i.location.line > lastLocation.line) {
+								tokens.data.push(i.location.line - lastLocation.line);
+								tokens.data.push(i.location.column);
+							} else {
+								tokens.data.push(0);
+								tokens.data.push(i.location.column - lastLocation.column);
+							}
+						} else {
+							tokens.data.push(i.location.line);
+							tokens.data.push(i.location.column);
+						}
+
+						tokens.data.push(i.length);
+						tokens.data.push(scls.toVscodeSemanticTokenIndex(i.type) as uinteger);
+
+						let modifiers: uinteger = 0;
+						if (i.modifiers) {
+							for (let j of i.modifiers) {
+								let m = scls.toVscodeSemanticTokenModifierIndex(j);
+								if (m === undefined) {
+									throw Error("Invalid semantic token modifier detected");
+								}
+								modifiers |= m;
+							}
+						}
+						tokens.data.push(modifiers);
+
+						lastLocation = i.location;
+					}
+				}
+			}
+
+
+			console.log("Token data:\n", tokens.data);
+
+			return tokens;
+		}
+	}
+
+	throw Error("Invalid response from the server");
+}
+
+async function onHover(params: HoverParams) : Promise<Hover> {
+	let request: scls.HoverRequest = {
+		uri: params.textDocument.uri,
+		location: {
+			line: params.position.line,
+			column: params.position.character
+		}
+	};
+
+	let response = await scls.sendHoverRequest(request);
+
+	switch (response.type) {
+		case scls.ResponseType.Hover: {
+			let body: scls.HoverResponseBody = response.body;
+
+			return {
+				contents: body.content
+			};
+		}
+	}
+
+	throw Error("Invalid response from the server");
 }
 
 // Make the text document manager listen on the connection
