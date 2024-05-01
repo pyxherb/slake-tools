@@ -367,9 +367,6 @@ async function onSemanticTokens(params: SemanticTokensParams): Promise<SemanticT
 				}
 			}
 
-
-			console.log("Token data:\n", tokens.data);
-
 			return tokens;
 		}
 	}

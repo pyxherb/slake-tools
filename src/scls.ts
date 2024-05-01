@@ -200,8 +200,8 @@ export function toVscodeSemanticTokenModifierIndex(modifier: SemanticTokenModifi
 }
 
 export interface SemanticToken {
-	type : SemanticTokenType;
-	modifiers : SemanticTokenModifier[];
+	type: SemanticTokenType;
+	modifiers: SemanticTokenModifier[];
 	location: Location;
 	length: uinteger;
 }
@@ -297,14 +297,19 @@ function sendRequest(data: string, path: string, method: string): Promise<string
 			method: method
 		};
 
+		let buffer: string = "";
+
 		let httpRequest = http.request(options, (res) => {
 			res.setEncoding('utf8');
 			res.on('data', (chunk) => {
 				if (res.statusCode === 200) {
-					resolve(chunk);
+					buffer += chunk;
 				} else {
 					throw Error("Error from server with status code " + res.statusCode + ": " + chunk);
 				}
+			});
+			res.on('end', () => {
+				resolve(buffer);
 			});
 		});
 		httpRequest.on('error', (e) => {

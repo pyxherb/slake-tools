@@ -20,7 +20,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control.slake",
-					"match": "\\b(async|await|break|case|catch|continue|default|else|for|if|return|static|switch|throw|try|while|yield)\\b"
+					"match": "\\b(async|await|break|case|catch|continue|default|else|for|if|let|return|static|switch|throw|try|while|yield)\\b"
 				},
 				{
 					"name": "keyword.control.import.slake",
@@ -48,7 +48,7 @@
 				},
 				{
 					"name": "storage.type",
-					"match": "\\b(class|enum|fn|module|struct|trait|i8|i16|i32|i64|u8|u16|u32|u64|f32|f64|string|bool|auto|void|any)\\b"
+					"match": "\\b(class|enum|fn|interface|module|struct|trait|i8|i16|i32|i64|u8|u16|u32|u64|f32|f64|string|bool|auto|void|any)\\b"
 				}
 			]
 		},
