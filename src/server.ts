@@ -165,18 +165,18 @@ connection.onCompletion(onCompletion);
 
 // This handler resolves additional information for the item selected in
 // the completion list.
-/*connection.onCompletionResolve(
+connection.onCompletionResolve(
 	(item: CompletionItem): CompletionItem => {
-		if (item.data === 1) {
+		/*if (item.data === 1) {
 			item.detail = 'TypeScript details';
 			item.documentation = 'TypeScript documentation';
 		} else if (item.data === 2) {
 			item.detail = 'JavaScript details';
 			item.documentation = 'JavaScript documentation';
-		}
+		}*/
 		return item;
 	}
-);*/
+);
 
 connection.languages.semanticTokens.on(onSemanticTokens);
 connection.onHover(onHover);
@@ -186,18 +186,33 @@ async function onDocumentOpen(textDocument: TextDocument): Promise<void> {
 
 	let request: scls.DocumentOpenRequest = {
 		uri: textDocument.uri,
+		content: textDocument.getText(),
 		languageId: textDocument.languageId,
 		markupType: scls.ClientMarkupType.Markdown
 	};
 	let response: scls.ServerResponse = await scls.sendDocumentOpenRequest(request);
 
+	let diagnostics: Diagnostic[] = [];
+
 	switch (response.type) {
 		case scls.ResponseType.DocumentOk: {
+			let body: scls.DocumentOkResponseBody = response.body;
+
+			if (body.compilerMessages) {
+				for(let i of body.compilerMessages) {
+					diagnostics.push(scls.toVscodeDiagnostic(i));
+				}
+			}
 			break;
 		}
 		case scls.ResponseType.DocumentError:
 			break;
 	}
+
+	// Send the computed diagnostics to VS Code.
+	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
+
+	connection.languages.semanticTokens.refresh();
 }
 
 async function onDocumentClose(textDocument: TextDocument): Promise<void> {
@@ -221,8 +236,6 @@ async function updateDocument(textDocument: TextDocument): Promise<void> {
 	// In this simple example we get the settings for every validate run.
 	let settings = await getDocumentSettings(textDocument.uri);
 
-	// The validator creates diagnostics for all uppercase words length 2 and more
-	let problems = 0;
 	let diagnostics: Diagnostic[] = [];
 
 	let request: scls.DocumentUpdateRequest = {
@@ -236,23 +249,8 @@ async function updateDocument(textDocument: TextDocument): Promise<void> {
 			let body: scls.DocumentOkResponseBody = response.body;
 
 			if (body.compilerMessages) {
-				for (let i of body.compilerMessages) {
-					let diagnostic: Diagnostic = {
-						range: {
-							start: {
-								line: i.location.line,
-								character: i.location.column
-							},
-							end: {
-								line: i.location.line,
-								character: i.location.column
-							}
-						},
-						message: i.message,
-						severity: scls.toVscodeDiagnosticSeverity(i.type)
-					};
-
-					diagnostics.push(diagnostic);
+				for(let i of body.compilerMessages) {
+					diagnostics.push(scls.toVscodeDiagnostic(i));
 				}
 			}
 			break;
@@ -374,7 +372,7 @@ async function onSemanticTokens(params: SemanticTokensParams): Promise<SemanticT
 	throw Error("Invalid response from the server");
 }
 
-async function onHover(params: HoverParams) : Promise<Hover> {
+async function onHover(params: HoverParams): Promise<Hover> {
 	let request: scls.HoverRequest = {
 		uri: params.textDocument.uri,
 		location: {

@@ -2,6 +2,7 @@
  * Definitions about SCLS (Slake Core Language Server) Protocol.
  */
 import * as http from 'http';
+import { Diagnostic } from 'vscode-languageserver/node';
 import { Position } from 'vscode-languageserver-textdocument';
 import { CompletionItemKind, DiagnosticSeverity, SemanticTokenModifiers, SemanticTokenTypes, uinteger } from 'vscode-languageserver/node';
 
@@ -117,6 +118,23 @@ export interface CompilerMessage {
 	message: string;
 }
 
+export function toVscodeDiagnostic(message: CompilerMessage): Diagnostic {
+	return {
+		range: {
+			start: {
+				line: message.location.line,
+				character: message.location.column
+			},
+			end: {
+				line: message.location.line,
+				character: message.location.column
+			}
+		},
+		message: message.message,
+		severity: toVscodeDiagnosticSeverity(message.type)
+	};
+}
+
 export enum SemanticTokenType {
 	None = 0,
 	Type,
@@ -212,6 +230,7 @@ export interface SemanticToken {
 
 export interface DocumentOpenRequest {
 	uri: string;
+	content: string;
 	languageId: string;
 	markupType: ClientMarkupType;
 }

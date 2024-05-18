@@ -20,11 +20,11 @@
 			"patterns": [
 				{
 					"name": "keyword.control.slake",
-					"match": "\\b(async|await|break|case|catch|continue|default|else|for|if|let|return|static|switch|throw|try|while|yield)\\b"
+					"match": "\\b(as|async|await|break|case|catch|continue|default|else|for|if|let|return|static|switch|throw|try|while|yield)\\b"
 				},
 				{
 					"name": "keyword.control.import.slake",
-					"match": "\\b(use)\\b"
+					"match": "\\b(use|import)\\b"
 				},
 				{
 					"name": "storage.modifier",
