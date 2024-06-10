@@ -2,7 +2,7 @@
  * Definitions about SCLS (Slake Core Language Server) Protocol.
  */
 import * as http from 'http';
-import { Diagnostic } from 'vscode-languageserver/node';
+import { Diagnostic, Location } from 'vscode-languageserver/node';
 import { Position } from 'vscode-languageserver-textdocument';
 import { CompletionItemKind, DiagnosticSeverity, SemanticTokenModifiers, SemanticTokenTypes, uinteger } from 'vscode-languageserver/node';
 
@@ -10,15 +10,30 @@ import { CompletionItemKind, DiagnosticSeverity, SemanticTokenModifiers, Semanti
 // Basic types and enumerations.
 //
 
-export interface Location {
+export interface SourcePosition {
 	line: uinteger;
 	column: uinteger;
 }
 
-export function toVscodePosition(loc: Location): Position {
+export interface SourceLocation {
+	begin: SourcePosition;
+	end: SourcePosition;
+}
+
+export function toVscodePosition(pos: SourcePosition): Position {
 	return {
-		line: loc.line,
-		character: loc.column
+		line: pos.line,
+		character: pos.column
+	};
+}
+
+export function toVscodeLocation(loc: SourceLocation): Location {
+	return {
+		uri: "",
+		range: {
+			start: toVscodePosition(loc.begin),
+			end: toVscodePosition(loc.end)
+		}
 	};
 }
 
@@ -113,23 +128,14 @@ export function toVscodeDiagnosticSeverity(type: CompilerMessageType): Diagnosti
 }
 
 export interface CompilerMessage {
-	location: Location;
+	location: SourceLocation;
 	type: CompilerMessageType;
 	message: string;
 }
 
 export function toVscodeDiagnostic(message: CompilerMessage): Diagnostic {
 	return {
-		range: {
-			start: {
-				line: message.location.line,
-				character: message.location.column
-			},
-			end: {
-				line: message.location.line,
-				character: message.location.column
-			}
-		},
+		range: toVscodeLocation(message.location).range,
 		message: message.message,
 		severity: toVscodeDiagnosticSeverity(message.type)
 	};
@@ -220,7 +226,7 @@ export function toVscodeSemanticTokenModifierIndex(modifier: SemanticTokenModifi
 export interface SemanticToken {
 	type: SemanticTokenType;
 	modifiers: SemanticTokenModifier[];
-	location: Location;
+	position: SourcePosition;
 	length: uinteger;
 }
 
@@ -246,7 +252,7 @@ export interface DocumentCloseRequest {
 
 export interface CompletionRequest {
 	uri: string;
-	location: Location;
+	position: SourcePosition;
 }
 
 export interface SemanticTokensRequest {
@@ -255,7 +261,7 @@ export interface SemanticTokensRequest {
 
 export interface HoverRequest {
 	uri: string;
-	location: Location;
+	position: SourcePosition;
 }
 
 //

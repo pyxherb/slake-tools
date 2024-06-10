@@ -268,7 +268,7 @@ async function updateDocument(textDocument: TextDocument): Promise<void> {
 async function onCompletion(_textDocumentPosition: TextDocumentPositionParams): Promise<CompletionItem[]> {
 	let request: scls.CompletionRequest = {
 		uri: _textDocumentPosition.textDocument.uri,
-		location: {
+		position: {
 			line: _textDocumentPosition.position.line,
 			column: _textDocumentPosition.position.character
 		}
@@ -328,21 +328,21 @@ async function onSemanticTokens(params: SemanticTokensParams): Promise<SemanticT
 			};
 
 			if (body.semanticTokens) {
-				let lastLocation: scls.Location | undefined = undefined;
+				let lastPosition: scls.SourcePosition | undefined = undefined;
 
 				for (let i of body.semanticTokens) {
 					if (i.type !== scls.SemanticTokenType.None) {
-						if (lastLocation !== undefined) {
-							if (i.location.line > lastLocation.line) {
-								tokens.data.push(i.location.line - lastLocation.line);
-								tokens.data.push(i.location.column);
+						if (lastPosition !== undefined) {
+							if (i.position.line > lastPosition.line) {
+								tokens.data.push(i.position.line - lastPosition.line);
+								tokens.data.push(i.position.column);
 							} else {
 								tokens.data.push(0);
-								tokens.data.push(i.location.column - lastLocation.column);
+								tokens.data.push(i.position.column - lastPosition.column);
 							}
 						} else {
-							tokens.data.push(i.location.line);
-							tokens.data.push(i.location.column);
+							tokens.data.push(i.position.line);
+							tokens.data.push(i.position.column);
 						}
 
 						tokens.data.push(i.length);
@@ -360,7 +360,7 @@ async function onSemanticTokens(params: SemanticTokensParams): Promise<SemanticT
 						}
 						tokens.data.push(modifiers);
 
-						lastLocation = i.location;
+						lastPosition = i.position;
 					}
 				}
 			}
@@ -375,7 +375,7 @@ async function onSemanticTokens(params: SemanticTokensParams): Promise<SemanticT
 async function onHover(params: HoverParams): Promise<Hover> {
 	let request: scls.HoverRequest = {
 		uri: params.textDocument.uri,
-		location: {
+		position: {
 			line: params.position.line,
 			column: params.position.character
 		}
