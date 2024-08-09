@@ -300,6 +300,7 @@ export interface SemanticTokensResponseBody {
 export interface HoverResponseBody {
 	uri: string;
 	content: string;
+	documentation?: string;
 }
 
 export interface ServerResponse {

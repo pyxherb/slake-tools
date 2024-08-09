@@ -13,6 +13,9 @@
 		},
 		{
 			"include": "#strings"
+		},
+		{
+			"include": "#line_comment"
 		}
 	],
 	"repository": {
@@ -94,6 +97,16 @@
 					"match": "\\\\."
 				}
 			]
+		},
+		"line_comment": {
+			"name": "comment.line",
+			"begin": "//",
+			"end": "\n"
+		},
+		"block_comment": {
+			"name": "comment.block",
+			"begin": "/*",
+			"end": "*/"
 		}
 	},
 	"scopeName": "source.slake"

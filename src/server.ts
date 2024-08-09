@@ -386,9 +386,23 @@ async function onHover(params: HoverParams): Promise<Hover> {
 	switch (response.type) {
 		case scls.ResponseType.Hover: {
 			let body: scls.HoverResponseBody = response.body;
+			let value = "";
+
+			if(body.documentation !== undefined) {
+				console.log(body.documentation);
+				value += body.documentation;
+				value += "\n\n";
+				value += "<hr/>";
+				value += "\n\n";
+			}
+
+			value += "```slake\n" + body.content + "```";
 
 			return {
-				contents: body.content
+				contents: {
+					kind: "markdown",
+					value: value
+				}
 			};
 		}
 	}
