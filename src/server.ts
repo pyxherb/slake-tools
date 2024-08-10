@@ -199,7 +199,7 @@ async function onDocumentOpen(textDocument: TextDocument): Promise<void> {
 			let body: scls.DocumentOkResponseBody = response.body;
 
 			if (body.compilerMessages) {
-				for(let i of body.compilerMessages) {
+				for (let i of body.compilerMessages) {
 					diagnostics.push(scls.toVscodeDiagnostic(i));
 				}
 			}
@@ -249,7 +249,7 @@ async function updateDocument(textDocument: TextDocument): Promise<void> {
 			let body: scls.DocumentOkResponseBody = response.body;
 
 			if (body.compilerMessages) {
-				for(let i of body.compilerMessages) {
+				for (let i of body.compilerMessages) {
 					diagnostics.push(scls.toVscodeDiagnostic(i));
 				}
 			}
@@ -388,15 +388,155 @@ async function onHover(params: HoverParams): Promise<Hover> {
 			let body: scls.HoverResponseBody = response.body;
 			let value = "";
 
-			if(body.documentation !== undefined) {
-				console.log(body.documentation);
-				value += body.documentation;
-				value += "\n\n";
-				value += "<hr/>";
-				value += "\n\n";
-			}
+			switch (body.responseKind) {
+				case scls.HoverResponseKind.None:
+					break;
+				case scls.HoverResponseKind.Declaration: {
+					let contents: scls.DeclarationHoverResponseContents = body.contents;
 
-			value += "```slake\n" + body.content + "```";
+					if (contents.documentation !== undefined) {
+						value += contents.documentation;
+						value += "\n\n";
+						value += "<hr/>";
+						value += "\n\n";
+					}
+
+					switch (contents.declarationKind) {
+						case scls.DeclarationKind.Property: {
+							let metadata = contents.metadata as scls.PropertyDeclarationMetadata;
+
+							value += "(Property) ";
+
+							value += "```slake\n";
+
+							value += "let "
+							value += metadata.fullName;
+							value += ": ";
+							value += metadata.type;
+
+							value += "\n```";
+
+							break;
+						}
+						case scls.DeclarationKind.Var: {
+							let metadata = contents.metadata as scls.VarDeclarationMetadata;
+
+							value += "```slake\n";
+
+							value += "let "
+							value += metadata.fullName;
+							value += ": ";
+							value += metadata.type;
+
+							value += "\n```";
+
+							break;
+						}
+						case scls.DeclarationKind.Param: {
+							let metadata = contents.metadata as scls.ParamDeclarationMetadata;
+
+							value += "(Parameter) ";
+
+							value += "```slake\n";
+
+							value += "let "
+							value += metadata.name;
+							value += ": ";
+							value += metadata.type;
+
+							value += "\n```";
+
+							break;
+						}
+						case scls.DeclarationKind.LocalVar: {
+							let metadata = contents.metadata as scls.LocalVarDeclarationMetadata;
+
+							value += "(Local Variable) ";
+
+							value += "```slake\n";
+
+							value += "let "
+							value += metadata.name;
+							value += ": ";
+							value += metadata.type;
+
+							value += "\n```";
+
+							break;
+						}
+						case scls.DeclarationKind.FnOverloading: {
+							let metadata = contents.metadata as scls.FnOverloadingDeclarationMetadata;
+
+							value += "```slake\n";
+
+							value += "fn "
+							value += metadata.fullName;
+
+							value += "(";
+
+							if (metadata.paramDecls !== undefined) {
+								for (let i = 0; i < metadata.paramDecls?.length; ++i) {
+									let curParamDecl = metadata.paramDecls[i];
+
+									value += curParamDecl.name;
+									value += ": ";
+									value += curParamDecl.type;
+								}
+							}
+
+							value += ")";
+
+							value += ": ";
+							value += metadata.returnType;
+
+							value += "\n```";
+
+							break;
+						}
+						case scls.DeclarationKind.GenericParam: {
+							let metadata = contents.metadata as scls.GenericParamDeclarationMetadata;
+
+							value += "(Generic Parameter) ";
+
+							value += "```slake\n";
+
+							value += metadata.name;
+
+							value += "\n```";
+
+							break;
+						}
+						case scls.DeclarationKind.Class: {
+							let metadata = contents.metadata as scls.ClassDeclarationMetadata;
+
+							value += "```slake\n";
+
+							value += "class ";
+							value += metadata.fullName;
+
+							value += "\n```";
+
+							break;
+						}
+						case scls.DeclarationKind.Interface: {
+							let metadata = contents.metadata as scls.ClassDeclarationMetadata;
+
+							value += "```slake\n";
+
+							value += "class ";
+							value += metadata.fullName;
+
+							value += "\n```";
+
+							break;
+						}
+					}
+
+					break;
+				}
+				default:
+					throw Error("Invalid response kind");
+			}
 
 			return {
 				contents: {

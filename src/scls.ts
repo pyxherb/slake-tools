@@ -297,10 +297,81 @@ export interface SemanticTokensResponseBody {
 	semanticTokens: SemanticToken[];
 }
 
+export const enum DeclarationKind {
+	Property = 0,
+	Var,
+	Param,
+	LocalVar,
+	FnOverloading,
+	GenericParam,
+	Class,
+	Interface,
+	Module
+}
+
+export type TypeName = string;
+
+export interface VarDeclarationMetadata {
+	fullName: string;
+	type: TypeName;
+}
+
+export type PropertyDeclarationMetadata = VarDeclarationMetadata;
+
+export interface ParamDeclarationMetadata {
+	name: string;
+	type: TypeName;
+}
+
+export interface LocalVarDeclarationMetadata {
+	name: string;
+	type: TypeName;
+}
+
+export interface FnOverloadingDeclarationMetadata {
+	fullName: string;
+	returnType: TypeName;
+	paramDecls?: ParamDeclarationMetadata[];
+	hasVaridicParams?: boolean;
+}
+
+export interface GenericParamDeclarationMetadata {
+	name: string;
+}
+
+export interface ClassDeclarationMetadata {
+	fullName: string;
+}
+
+export interface InterfaceDeclarationMetadata {
+	fullName: string;
+}
+
+export type DeclarationMetadata =
+	PropertyDeclarationMetadata |
+	VarDeclarationMetadata |
+	ParamDeclarationMetadata |
+	LocalVarDeclarationMetadata |
+	FnOverloadingDeclarationMetadata |
+	GenericParamDeclarationMetadata |
+	ClassDeclarationMetadata |
+	InterfaceDeclarationMetadata;
+
+export interface DeclarationHoverResponseContents {
+	declarationKind: DeclarationKind;
+	metadata: DeclarationMetadata;
+	documentation?: string;
+}
+
+export enum HoverResponseKind {
+	None = 0,
+	Declaration
+}
+
 export interface HoverResponseBody {
 	uri: string;
-	content: string;
-	documentation?: string;
+	responseKind: HoverResponseKind;
+	contents: DeclarationHoverResponseContents;
 }
 
 export interface ServerResponse {
