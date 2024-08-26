@@ -1,14 +1,19 @@
 import * as path from 'path';
-import { workspace, ExtensionContext } from 'vscode';
+import { workspace, ExtensionContext, window } from 'vscode';
 
 import {
 	LanguageClient,
 	LanguageClientOptions,
 	ServerOptions,
-	TransportKind
+	TransportKind,
+	ErrorHandler,
+	ErrorHandlerResult,
+	CloseHandlerResult,
+	CloseAction,
+	ErrorAction
 } from 'vscode-languageclient/node';
 
-let client: LanguageClient;
+let langaugeClient: LanguageClient;
 
 export function activate(context: ExtensionContext) {
 	// The server is implemented in node
@@ -35,11 +40,31 @@ export function activate(context: ExtensionContext) {
 		synchronize: {
 			// Notify the server about file changes to '.clientrc files contained in the workspace
 			fileEvents: workspace.createFileSystemWatcher('**/.clientrc')
+		},
+		errorHandler: {
+			error: async function (error, message, count): Promise<ErrorHandlerResult> {
+				let result = await window.showErrorMessage("Error running Slake server:\n" + error.message);
+
+				return {
+					action: ErrorAction.Continue
+				};
+			},
+			closed: async function (): Promise<CloseHandlerResult> {
+				let result = await window.showErrorMessage("Slake server closed\n", "Restart");
+
+				if (result === "Restart")
+					return {
+						action: CloseAction.Restart
+					};
+				return {
+					action: CloseAction.DoNotRestart
+				};
+			}
 		}
 	};
 
 	// Create the language client and start the client.
-	client = new LanguageClient(
+	langaugeClient = new LanguageClient(
 		'slakeServer',
 		'Slake language server',
 		serverOptions,
@@ -47,12 +72,12 @@ export function activate(context: ExtensionContext) {
 	);
 
 	// Start the client. This will also launch the server
-	return client.start();
+	return langaugeClient.start();
 }
 
 export function deactivate(): Thenable<void> | undefined {
-	if (!client) {
+	if (!langaugeClient) {
 		return undefined;
 	}
-	return client.stop();
+	return langaugeClient.stop();
 }
