@@ -383,7 +383,7 @@ export interface ServerResponse {
 // SCLS server interaction definitions.
 //
 
-export let serverPort = 11451;
+export let serverPort = 8080;
 
 function sendRequest(data: string, path: string, method: string): Promise<string> {
 	return new Promise((resolve, reject) => {
